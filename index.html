@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#163d35">
+  <meta name="description" content="An educational earthquake and evacuation routing simulator for six Metro Manila cities.">
+  <title>QuakeMap MNL · Earthquake Network Lab</title>
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="vendor/leaflet/leaflet.js"></script>
+  <script type="module" src="src/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#workspace">Skip to workspace</a>
+  <header class="topbar">
+    <a class="brand" href="#overview"><span class="brand-icon" aria-hidden="true">⌁</span><span>QuakeMap <strong>MNL</strong><small>Metro Manila earthquake lab</small></span></a>
+    <nav aria-label="Workspace">
+      <a href="#overview" data-view="overview">Overview</a>
+      <a href="#simulation" data-view="simulation">Simulation</a>
+      <a href="#evacuation" data-view="evacuation">Evacuation</a>
+      <a href="#network" data-view="network">Network</a>
+      <a href="#recovery" data-view="recovery">Recovery</a>
+      <a href="#methodology" data-view="methodology">Methodology</a>
+    </nav>
+    <div class="file-actions">
+      <button id="import" class="export" disabled>↑ Import</button>
+      <button id="export" class="export" disabled>↓ Export</button>
+      <input id="scenario-file" type="file" accept=".json,application/json" hidden aria-label="Scenario JSON file">
+    </div>
+  </header>
+
+  <main id="workspace">
+    <section class="page-heading" aria-labelledby="title">
+      <div><p class="eyebrow"><span></span> West Valley Fault study area</p><h1 id="title">Earthquake simulator</h1><p id="subtitle">Explore how road failures reshape access across six Metro Manila cities.</p></div>
+      <span class="study-label">Educational model</span>
+    </section>
+    <p id="file-status" class="file-status" role="status" hidden></p>
+    <div class="workspace-grid">
+      <section class="map-card" aria-labelledby="map-title">
+        <header class="map-head">
+          <div><h2 id="map-title">Metro Manila</h2><p>OpenStreetMap road network</p></div>
+          <div class="map-actions">
+            <label class="map-city"><span class="visually-hidden">Focus city</span><select id="city"><option value="">All six cities</option></select></label>
+            <button id="fit-study" disabled title="Fit study area" aria-label="Fit study area"><span aria-hidden="true">⌖</span></button>
+          </div>
+        </header>
+        <div class="mobile-scenario" id="mobile-scenario" hidden>
+          <div><strong id="mobile-phase">Before</strong><p id="mobile-result">Run the selected scenario.</p></div>
+          <button id="mobile-shake" class="primary" disabled>Shake network</button>
+        </div>
+        <div class="map-stage">
+          <div id="map" aria-label="Interactive Metro Manila road map"></div>
+          <p id="map-status" class="map-status" role="status">Loading road network…</p>
+          <div id="shake-banner" class="shake-banner" hidden>
+            <p>Simulated shaking in progress</p><strong>Drop, Cover, and Hold On</strong>
+          </div>
+        </div>
+        <section id="map-inspector" class="map-inspector" aria-label="Selected map feature" hidden>
+          <div id="inspector-info" role="status"></div>
+          <button id="inspector-action">Open full analysis</button>
+          <button id="inspector-close" aria-label="Close map inspector">×</button>
+        </section>
+        <div class="legend" aria-label="Map legend">
+          <span><i class="key road"></i>Modeled road</span><span><i class="key damage"></i>Failed segment</span>
+          <span><i class="key route"></i>Route</span><span><i class="key shelter">+</i>Demo shelter</span>
+          <span id="critical-key" hidden><i class="key critical"></i>Critical connection</span>
+          <details class="layers"><summary>Layers</summary><div>
+            <label><input id="show-road" type="checkbox" checked> Modeled roads</label>
+            <label><input id="show-failed" type="checkbox" checked> Failed segments</label>
+            <label><input id="show-shelter" type="checkbox" checked> Demo shelters</label>
+            <label><input id="show-boundaries" type="checkbox" checked> Study city boundaries</label>
+            <label><input id="show-critical" type="checkbox"> Critical links and junctions</label>
+          </div></details>
+        </div>
+      </section>
+
+      <aside class="sidebar" aria-label="Workspace controls">
+        <section id="overview" class="control-card view" hidden>
+          <h2>Explore QuakeMap MNL</h2>
+          <p>Run a seeded earthquake scenario and trace how simulated failures change which shelters the road network can reach.</p>
+          <a class="primary" href="#simulation">Start simulation <span aria-hidden="true">→</span></a>
+          <button id="overview-demo" disabled>Try a sample scenario</button>
+          <h3>Six study cities</h3><p>Quezon City, Marikina, Pasig, Makati, Taguig, and Muntinlupa.</p>
+          <h3>Discrete Structures 2</h3><p>University of Makati · BS Computer Science III-BCSAD</p>
+        </section>
+        <section id="simulation" class="control-card view">
+          <div class="section-head"><h2>Scenario controls</h2><span id="phase" class="phase" role="status">Before</span></div>
+          <ol class="phases" aria-label="Simulation phases">
+            <li aria-current="step">Before</li><li>During</li><li>After</li><li>Recovery</li>
+          </ol>
+          <div class="magnitude">
+            <label for="magnitude">Magnitude for next run</label>
+            <output id="magnitude-value" for="magnitude">7.0 <small>M</small></output>
+            <input id="magnitude" type="range" min="5" max="8" step="0.1" value="7">
+            <div class="range-scale"><span>5.0</span><span>6.0</span><span>7.0</span><span>8.0</span></div>
+          </div>
+          <div class="chance"><span>Road failure chance <strong id="road-chance">20%</strong></span><span>Bridge failure chance <strong id="bridge-chance">36%</strong></span></div>
+          <p class="help">These probabilities belong to the teaching model. Local shaking intensity varies by location.</p>
+          <button id="shake" class="primary" disabled><span aria-hidden="true">⌁</span> Shake network</button>
+          <button id="demo" class="sample-button" title="Loads a fixed seed, Quezon City origin, and default shelter settings" disabled>Try a sample scenario</button>
+          <div class="button-row"><button id="replay" disabled>Replay</button><button id="reset" disabled>Reset</button></div>
+          <details class="advanced"><summary>Scenario options</summary>
+            <label for="seed">Random seed</label><div class="seed-row"><input id="seed" maxlength="80" value="QUAKE-2026"><button id="new-seed" type="button">New seed</button></div>
+            <label class="check"><input id="lock-seed" type="checkbox" checked> Keep seed fixed</label>
+            <label class="check"><input id="reduce-motion" type="checkbox"> Reduce motion</label>
+          </details>
+          <div id="summary" class="result" role="status">Run a scenario to see how the network changes.</div>
+          <div id="sample-next" class="button-row" hidden>
+            <button id="sample-failure">Inspect a failed road</button>
+            <button id="sample-route">Show evacuation route</button>
+          </div>
+          <a class="text-link" href="#evacuation">Open evacuation planner →</a>
+        </section>
+        <section id="evacuation" class="control-card view" hidden>
+          <h2>Evacuation planner</h2>
+          <p>Select a modeled starting junction and enter the number of evacuees.</p>
+          <label for="origin-search">Search starting points</label><input id="origin-search" type="search" placeholder="City, mapped barangay, or road">
+          <label for="origin">Origin junction</label><select id="origin"></select>
+          <p id="origin-status" class="help" role="status"></p>
+          <label for="group">Evacuees</label><input id="group" type="number" min="1" max="1000" step="1" value="4">
+          <div id="route-result" class="result" role="status">Run a scenario to plan a route on the surviving network.</div>
+          <label for="route-options">Destination and alternatives</label><select id="route-options" disabled><option>No modeled route</option></select>
+          <div class="button-row">
+            <button id="fit-route" disabled>Show on map</button><button id="detour" disabled>Find alternate path</button>
+          </div>
+          <label for="centers">Inspect a demo shelter</label><select id="centers"></select>
+          <div id="center-info" class="result"></div>
+          <details class="advanced"><summary>Coverage and provenance</summary><p id="route-source"></p><p>Routes use selected, undirected roads. Distance is a model result. Turn restrictions, pedestrian access, and real shelter operations are outside this model.</p></details>
+        </section>
+        <section id="network" class="control-card view" hidden>
+          <h2>Network analysis</h2>
+          <div id="network-result" class="result" role="status"></div>
+          <details class="advanced"><summary>Access by study city</summary><div id="city-results"></div></details>
+          <details class="advanced"><summary>Origins without shelter access</summary><div id="isolated-origins"></div></details>
+          <details class="advanced"><summary>Inspect failures and critical features</summary>
+            <p>A physical bridge crosses an obstacle. A graph bridge is any surviving road segment whose removal splits its component.</p>
+            <label for="feature-kind">Feature type</label>
+            <select id="feature-kind"><option value="failed">Failed segment</option><option value="bridges">Graph bridge</option><option value="cutVertices">Critical junction</option></select>
+            <label for="feature-select">Modeled feature</label><select id="feature-select"></select>
+            <div class="button-row"><button id="feature-prev" disabled>Previous results</button><button id="feature-next" disabled>Next results</button></div>
+            <button id="feature-show" disabled>Inspect on map</button>
+            <p id="feature-info" role="status"></p>
+          </details>
+          <label for="road-search">Find a modeled road</label><input id="road-search" type="search" placeholder="Road name or OSM way ID">
+          <label class="visually-hidden" for="road-results">Matching road segments</label><select id="road-results" size="4"></select>
+          <div id="road-info" class="result"><p>Select a segment on the map or in search results.</p></div>
+          <details class="advanced"><summary>Repeatable experiments</summary>
+            <p>Sample independent scenarios at the current magnitude and compare the same seeds across magnitudes.</p>
+            <button id="experiment" disabled>Run 100 trials</button>
+            <p id="experiment-result" role="status"></p>
+          </details>
+          <details class="advanced" id="compare-panel"><summary>Run comparison</summary><div id="comparison"><p>Run two scenarios to compare their results.</p></div></details>
+        </section>
+        <section id="recovery" class="control-card view" hidden>
+          <h2>Preparedness &amp; recovery</h2>
+          <h3>Before shaking</h3><p>Identify cover, prepare an emergency kit, and follow your local disaster risk reduction office.</p>
+          <h3>During shaking</h3><p>Drop, Cover, and Hold On. Protect your head and neck.</p>
+          <h3>After shaking</h3><p>Expect aftershocks and follow official instructions about road conditions and evacuation.</p>
+          <button id="recover" class="primary" disabled>Enter recovery phase</button>
+          <div id="repair-controls" hidden>
+            <label for="repair-road">Failed segment to reopen</label><select id="repair-road"></select>
+            <button id="repair" disabled>Reopen modeled segment</button>
+          </div>
+          <div id="recovery-result" class="result" role="status"><p>Enter Recovery after a run to measure the effects of reopening a road.</p></div>
+        </section>
+        <section id="methodology" class="control-card view" hidden>
+          <h2>Methodology</h2>
+          <h3>Geographic graph</h3><p>OSM ways are split at shared nodes and road endpoints. Edge weights sum geographic distances along each segment. Crossings connect only where ways share an OSM node.</p>
+          <h3>Independent trials</h3><p>For magnitude M, road probability is 0.04 + 0.08(M − 5), and mapped bridge probability is 0.10 + 0.13(M − 5). Both are clamped to [0, 0.8]. Each segment receives a seeded independent draw.</p>
+          <h3>Surviving network</h3><p>Graph traversal finds connected components. Tarjan’s algorithm identifies cut vertices and cut edges in O(V + E). Heap-based Dijkstra ranks reachable eligible destinations in O((V + E) log V) on this road network.</p>
+          <h3>Model limits</h3><p>The graph is undirected and sampled from selected road classes. Capacities, occupancy, and closures are scenario inputs. No engineering damage, actual shelter status, traffic, or safe travel is predicted.</p>
+          <p id="provenance"></p>
+          <p><a href="https://www.openstreetmap.org/copyright">OpenStreetMap data and attribution</a></p>
+          <p><a href="https://gisweb.phivolcs.dost.gov.ph/">PHIVOLCS fault and hazard information</a></p>
+        </section>
+      </aside>
+    </div>
+    <footer><p><strong>Educational use only.</strong> For emergency instructions, follow local authorities.</p><div><a href="https://www.phivolcs.dost.gov.ph/">PHIVOLCS ↗</a><a href="https://ndrrmc.gov.ph/">NDRRMC ↗</a></div></footer>
+  </main>
+</body>
+</html>
